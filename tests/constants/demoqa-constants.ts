@@ -7,7 +7,7 @@ export const endpoints = {
 }
 
 export const userInfo = {
-    firsName: 'Alden',
+    firstName: 'Alden',
     lastName: 'Cantrell',
     age: '30',
     email: 'test@test.com',

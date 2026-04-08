@@ -1,8 +1,9 @@
 import {test} from '../../fixtures/demoqa/demoqa.fixtures';
 import {userInfo} from "../../constants/demoqa-constants";
+import {expect} from "@playwright/test";
 
 test.describe('Проверка базовых сценариев с таблицей', () => {
-    test.afterEach(async ({mainPage}) => {
+    test.afterEach(async ({mainPage, webTablesPage}) => {
         await mainPage.page.context().clearCookies();
     });
 
@@ -10,13 +11,19 @@ test.describe('Проверка базовых сценариев с табли�
         await mainPage.goto()
         await mainPage.elementsButton.click()
         await mainPage.navigationMenu.webTablesButton.click()
+        const rowsCount = await webTablesPage.registrationTableRow.getLocator.count()
         await webTablesPage.addRecordButton.click()
-        await webTablesPage.firstNameInput.fill(userInfo.firsName)
+        await webTablesPage.firstNameInput.fill(userInfo.firstName)
         await webTablesPage.lastNameInput.fill(userInfo.lastName)
         await webTablesPage.emailInput.fill(userInfo.email)
         await webTablesPage.ageInput.fill(userInfo.age)
         await webTablesPage.salaryInput.fill(userInfo.salary)
         await webTablesPage.departmentInput.fill(userInfo.department)
         await webTablesPage.submitRegistrationButton.click()
+        await webTablesPage.registrationFormTitle.waitForInvisibility()
+        expect (await webTablesPage.registrationTableRow.getLocator.count()).toEqual(rowsCount + 1)
+        for (const value of Object.values(userInfo)) {
+            await expect(webTablesPage.registrationTableRow.getLocator.nth(rowsCount).getByText(value, {exact: true})).toBeVisible();
+        }
     });
 });

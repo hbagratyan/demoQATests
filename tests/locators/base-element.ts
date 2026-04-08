@@ -52,6 +52,18 @@ export class BaseElement {
         )
     }
 
+    async waitForInvisibility(): Promise<void> {
+        await test.step(
+            `Убедиться что [${this.name}] отображается`,
+            async () => {
+                await this.locator.waitFor({
+                    state: 'hidden',
+                    timeout: 5000
+                })
+            }
+        )
+    }
+
     async focus(): Promise<void> {
         await test.step(
             `Убедиться что на [${this.name}] установлен фокус`,

@@ -4,6 +4,7 @@ import {base_url} from "../../constants/demoqa-constants";
 import {NavigationMenu} from "./navigation-menu";
 import {Button} from "../../locators/button";
 import {Input} from "../../locators/input";
+import {Block} from "../../locators/block";
 
 export class WebTablesPage extends BasePage {
     baseURL: string;
@@ -24,6 +25,10 @@ export class WebTablesPage extends BasePage {
     }
 
     // Элементы модалки ввода данных пользователя в форме регистрации
+
+    get registrationFormTitle(): Block {
+        return new Block(this.page.getByText('Registration Form'), "Заголовок модалки формы регистрации");
+    }
 
     get firstNameInput(): Input {
         return new Input(this.page.locator('input[id="firstName"]'), "Поле ввода имени в форме регистрации");
@@ -51,5 +56,9 @@ export class WebTablesPage extends BasePage {
 
     get submitRegistrationButton(): Button {
         return new Button(this.page.locator('button[id="submit"]'), "Кнопка подтверждения регистрации");
+    }
+
+    get registrationTableRow(): Block {
+        return new Block(this.page.locator('table tr'), "Строка таблицы на странице формы регистрации");
     }
 }
