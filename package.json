@@ -11,5 +11,8 @@
     "@types/node": "^25.5.2",
     "typescript": "^5.5.3"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@faker-js/faker": "^10.4.0"
+  }
 }

@@ -3,7 +3,7 @@ import {userInfo} from "../../constants/demoqa-constants";
 import {expect} from "@playwright/test";
 
 test.describe('Проверка базовых сценариев с таблицей', () => {
-    test.afterEach(async ({mainPage, webTablesPage}) => {
+    test.afterEach(async ({mainPage}) => {
         await mainPage.page.context().clearCookies();
     });
 
