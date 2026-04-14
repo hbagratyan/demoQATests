@@ -1,147 +1,124 @@
-import {test} from '../../fixtures/demoqa/demoqa.fixtures';
+import {test} from '../../fixtures/demoqa/demoqa.api.fixtures';
 import {expect} from "@playwright/test";
-import {endpoints} from "../../constants/demoqa-constants";
-import {DataGenerator} from "../../utils/data.generator";
 
 test.describe('API проверки создания пользователя, добавления и удаления книг', () => {
 
-    const data = new DataGenerator()
+    test('Create User - Valid credentials', async ({userClient, dataGenerator}) => {
+        const username = dataGenerator.userName()
+        const password = dataGenerator.password()
 
-    test('Create User - Valid credentials', async ({request}) => {
-        const username = data.userName()
-        const password = data.password()
+        const response = await userClient.createUser(username, password);
 
-        const response = await request.post(endpoints.createUser, {
-            data: {
-                userName: username,
-                password: password
-            }
-        });
-
-        expect(response.status()).toBe(201);
-        const body = await response.json();
-        expect(body.username).toBe(username);
+        expect(response.status).toBe(201);
+        expect(response.body.username).toBe(username);
     });
 
-    test('Create User with Empty Username - Error validation', async ({request}) => {
-        const response = await request.post(endpoints.createUser, {
-            data: {
-                userName: '',
-                password: data.password()
-            }
-        });
+    test('Create User with Empty Username - Error validation', async ({userClient, dataGenerator}) => {
+        const response = await userClient.createUser('', dataGenerator.password());
 
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.userID).toBeUndefined();
-        expect(body.code).toBeDefined();
-        expect(body.message).toContain('required');
+        expect(response.status).toBe(400);
+        expect(response.body.userID).toBeUndefined();
+        expect(response.body.code).toBeDefined();
+        expect(response.body.message).toContain('required');
     });
 
-    test('Create User with Empty Password - Error validation', async ({request}) => {
-        const response = await request.post(endpoints.createUser, {
-            data: {
-                userName: data.userName(),
-                password: ''
-            }
-        });
+    test('Create User with Empty Password - Error validation', async ({userClient, dataGenerator}) => {
+        const response = await userClient.createUser(dataGenerator.userName(), '');
 
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.userID).toBeUndefined();
-        expect(body.code).toBeDefined();
-        expect(body.message).toContain('required');
+        expect(response.status).toBe(400);
+        expect(response.body.userID).toBeUndefined();
+        expect(response.body.code).toBeDefined();
+        expect(response.body.message).toContain('required');
     });
 
-    test('Add Book Happy Path', async ({request}) => {
+    test('Add Book - Valid data', async ({userClient, dataGenerator, bookClient}) => {
         // 1. Create user
-        const username = data.userName()
-        const password = data.password()
-
-        const userResponse = await request.post(endpoints.createUser, {
-            data: {
-                userName: username,
-                password: password
-            }
-        });
-
-        expect(userResponse.status()).toBe(201);
-        const userBody = await userResponse.json();
-        const userId = userBody.userID;
+        const username = dataGenerator.userName()
+        const password = dataGenerator.password()
+        const userResponse = await userClient.createUser(username, password);
+        expect(userResponse.status).toBe(201);
+        const userId = userResponse.body.userID;
 
         // 2. Generate token
-        const tokenResponse = await request.post(endpoints.generateToken, {
-            data: {
-                userName: username,
-                password: password
-            }
-        });
-
-        const tokenBody = await tokenResponse.json();
-        const token = tokenBody.token;
+        const tokenResponse = await userClient.generateToken(username, password);
+        const token = tokenResponse.body.token;
 
         // 3. Add book to user
         const isbn = "9781449325862"; // реальный ISBN из DemoQA
 
-        const addBookResponse = await request.post(endpoints.bookActions, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            },
-            data: {
-                userId,
-                collectionOfIsbns: [
-                    {isbn}
-                ]
-            }
-        });
-        const body = await addBookResponse.json();
-        expect(body.books).toEqual(
+        const addBookResponse = await bookClient.addBook(userId, token, isbn)
+        expect(addBookResponse.body.books).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({isbn})
             ])
         );
     });
 
-    test('Add Book without token should fail', async ({ request }) => {
-        const username = data.userName();
-        const password = data.password();
+    test('Add Book without token - Error validation', async ({userClient, dataGenerator, bookClient}) => {
+        const username = dataGenerator.userName();
+        const password = dataGenerator.password();
 
         // create user
-        const userResponse = await request.post(endpoints.createUser, {
-            data: { userName: username, password }
-        });
-        const userId = (await userResponse.json()).userID;
+        const userResponse = await userClient.createUser(username, password);
+        const userId = await userResponse.body.userID;
 
         const isbn = "9781449325862";
 
-        const response = await request.post(endpoints.bookActions, {
-            // ❌ без Authorization
-            data: {
-                userId,
-                collectionOfIsbns: [{ isbn }]
-            }
-        });
+        const response = await bookClient.addBook(userId, '', isbn)
 
-        expect(response.status()).toBe(401);
+        expect(response.status).toBe(401);
     });
 
-    test('Delete Book Happy Path', async ({ request }) => {
+    test('Delete Book Happy Path', async ({userClient, dataGenerator, bookClient}) => {
+        // 1. Create user
+        const username = dataGenerator.userName();
+        const password = dataGenerator.password();
+        const userResponse = await userClient.createUser(username, password);
+        expect(userResponse.status).toBe(201);
+        const userId = userResponse.body.userID;
 
+        // 2. Generate token
+        const tokenResponse = await userClient.generateToken(username, password);
+        const token = tokenResponse.body.token;
+
+        // 3. Add book to user
+        const isbn = "9781449325862"; // реальный ISBN из DemoQA
+
+        const addBookResponse = await bookClient.addBook(userId, token, isbn)
+        expect(addBookResponse.body.books).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({isbn})
+            ])
+        );
+        // 4. Delete book from user
+        const deleteBookResponse = await bookClient.deleteBook(userId, token, isbn);
+        expect(deleteBookResponse.status).toBe(204);
     });
 
-    test('Delete Book sad Path', async ({request}) => {
-        const response = await request.delete(endpoints.bookActions,
-            {
-                data: {
-                    userId: "string",
-                    collectionOfIsbns: [
-                        {
-                            isbn: "string"
-                        }
-                    ]
-                }
-            }
-        )
-        expect(response.status()).toBe(200);
+    test('Delete Book sad Path', async ({userClient, dataGenerator, bookClient}) => {
+        // 1. Create user
+        const username = dataGenerator.userName();
+        const password = dataGenerator.password();
+        const userResponse = await userClient.createUser(username, password);
+        expect(userResponse.status).toBe(201);
+        const userId = userResponse.body.userID;
+
+        // 2. Generate token
+        const tokenResponse = await userClient.generateToken(username, password);
+        const token = tokenResponse.body.token;
+
+        // 3. Add book to user
+        const isbn = "9781449325862"; // реальный ISBN из DemoQA
+
+        const addBookResponse = await bookClient.addBook(userId, token, isbn)
+        expect(addBookResponse.body.books).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({isbn})
+            ])
+        );
+        // 4. Delete book from user
+        const deleteBookResponse = await bookClient.deleteBook(userId, '', isbn);
+        expect(deleteBookResponse.status).toBe(401);
+
     });
 });
